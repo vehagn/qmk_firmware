@@ -14,5 +14,3 @@
 #define USB_POLLING_INTERVAL_MS 1
 
 #define SPLIT_LAYER_STATE_ENABLE
-
-#include "../../config.h"

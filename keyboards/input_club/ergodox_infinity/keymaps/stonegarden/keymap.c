@@ -1,6 +1,12 @@
 #include QMK_KEYBOARD_H
 #include "version.h"
-#include "layers.h"
+
+enum custom_layers {
+    _BASE,
+    _MEDIA,
+    _NUMPAD,
+    _FUNC,
+};
 
 enum custom_keycodes {
     BASE = SAFE_RANGE,
@@ -94,63 +100,50 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,    _______,    _______,    _______,    _______,    _______,
         _______,    _______,    _______,    _______,    _______,    KC_RGUI,    KC_RSFT,
         _______,    _______,    _______,    _______,    KC_RCTL,
-        BASE,       _______,
+        BASE,       VRSN,
         _______,
         _______, _______, _______)
 };
 
-void matrix_init_user() {
-    led_matrix_enable_noeeprom();
-    led_matrix_set_val_noeeprom(UINT8_MAX);
-}
-
-void matrix_scan_user(void) {
-    uint8_t layer = get_highest_layer(layer_state);
-
-    ergodox_board_led_off();
-    ergodox_right_led_1_off();
-    ergodox_right_led_2_off();
-    ergodox_right_led_3_off();
-    switch (layer) {
-        case 1:
-            ergodox_right_led_1_on();
-            break;
-        case 2:
-            ergodox_right_led_2_on();
-            break;
-        default:
-            // none
-            break;
-    }
-}
-
-
+// https://docs.qmk.fm/#/feature_st7565?id=st7565-lcd-driver
 #ifdef ST7565_ENABLE
 void st7565_task_user(void) {
-    // Host Keyboard Layer Status
-    st7565_write_P(PSTR("Layer: "), false);
-
     switch (get_highest_layer(layer_state)) {
         case _BASE:
-            st7565_write_P(PSTR("Default\n"), false);
+            if (is_keyboard_master()) {
+                st7565_write_ln_P(PSTR("\n     Ergodox    \n        Infinity\n"), false);
+            } else {
+                static const char PROGMEM qmk_logo[] = {
+                    0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F, 0x90, 0x91, 0x92, 0x93, 0x94,
+                    0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4,
+                    0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0x00
+                };
+
+                st7565_write_P(qmk_logo, false);
+            }
+            // Takes values between 0 and UINT16_MAX (65 535)
+            ergodox_infinity_lcd_color(25000, 25000, 25000);
             break;
         case _MEDIA:
-            ergodox_infinity_lcd_color(32767, 0, 0);
-            st7565_write_P(PSTR("Media\n"), false);
+            st7565_write_ln_P(PSTR("\n        MEDIA\n\n"), false);
+            ergodox_infinity_lcd_color(10000, 10000, 40000);
             break;
         case _NUMPAD:
-            st7565_write_P(PSTR("Numpad\n"), false);
+            if (is_keyboard_master()) {
+                st7565_write_ln_P(PSTR("\n        MOUSE\n\n"), false);
+                ergodox_infinity_lcd_color(25000, 25000, 0);
+            } else {
+                st7565_write_ln_P(PSTR("\n        NUMPAD\n\n"), false);
+                ergodox_infinity_lcd_color(0, 32768, 0);
+            }
+            break;
+        case _FUNC:
+            st7565_write_ln_P(PSTR("\n       FUNCTION\n\n"), false);
+            ergodox_infinity_lcd_color(UINT16_MAX >> 1, 0, UINT16_MAX >> 1);
             break;
         default:
-            // Or use the write_ln shortcut over adding '\n' to the end of your string
-            st7565_write_ln_P(PSTR("Undefined"), false);
+            st7565_write_ln_P(PSTR("\n       UNDEFINED\n\n"), false);
     }
-
-    // Host Keyboard LED Status
-    led_t led_state = host_keyboard_led_state();
-    st7565_write_P(led_state.num_lock ? PSTR("NUM ") : PSTR("    "), false);
-    st7565_write_P(led_state.caps_lock ? PSTR("CAP ") : PSTR("    "), false);
-    st7565_write_P(led_state.scroll_lock ? PSTR("SCR ") : PSTR("    "), false);
 }
 #endif
 
